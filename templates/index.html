@@ -1,1 +1,735 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мониторинг Telegram ботов</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 15px;
+            padding: 20px;
+        }
+        
+        .status-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 15px;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .status-online {
+            border-left: 4px solid #28a745;
+        }
+        
+        .status-offline {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .status-error {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        
+        .indicator-online {
+            background-color: #28a745;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.5);
+        }
+        
+        .indicator-offline {
+            background-color: #dc3545;
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
+        }
+        
+        .indicator-error {
+            background-color: #ffc107;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+        }
+        
+        .btn-custom {
+            border-radius: 20px;
+            padding: 6px 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 12px;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-success-custom {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .btn-danger-custom {
+            background: linear-gradient(45deg, #dc3545, #fd7e14);
+            color: white;
+        }
+        
+        .btn-warning-custom {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+            color: white;
+        }
+        
+        .btn-info-custom {
+            background: linear-gradient(45deg, #17a2b8, #6f42c1);
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+        
+        .monitoring-controls {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .server-info {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .bot-status {
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+        }
+        
+        .bot-running {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .bot-stopped {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .active-server {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        .bot-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid #dee2e6;
+        }
+        
+        .bot-card.running {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .bot-card.stopped {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .bot-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        
+        .bot-controls .btn {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+        
+        .server-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .auto-restart-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .form-check-input {
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+        
+        .compact-info {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        
+        .server-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .bots-summary {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Заголовок -->
+            <div class="header">
+                <h1><i class="fas fa-robot"></i> Мониторинг Telegram ботов</h1>
+                <p>Автоматическое переключение и автоперезапуск</p>
+            </div>
 
+            <!-- Управление мониторингом -->
+            <div class="monitoring-controls">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <h6 class="mb-2"><i class="fas fa-cog"></i> Управление</h6>
+                        <p class="compact-info mb-0">Статус: <span id="monitoring-status">Загрузка...</span></p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="auto-restart-toggle">
+                            <input class="form-check-input" type="checkbox" id="auto-restart-toggle" checked>
+                            <label class="form-check-label compact-info" for="auto-restart-toggle">
+                                Автоперезапуск ботов
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button id="start-monitoring" class="btn btn-success-custom btn-custom me-2">
+                            <i class="fas fa-play"></i> Запустить
+                        </button>
+                        <button id="stop-monitoring" class="btn btn-danger-custom btn-custom">
+                            <i class="fas fa-stop"></i> Остановить
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Индикатор загрузки -->
+            <div id="loading" class="loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+                <p class="mt-2 compact-info">Обновление данных...</p>
+            </div>
+
+            <!-- Статус серверов -->
+            <div id="servers-container">
+                <!-- Серверы будут загружены динамически -->
+            </div>
+
+            <!-- Активный сервер -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card status-card">
+                        <div class="card-body text-center py-3">
+                            <h6 class="mb-2"><i class="fas fa-star"></i> Активный сервер</h6>
+                            <div id="active-server-display">
+                                <span class="active-server">Определяется...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class MonitoringDashboard {
+            constructor() {
+                this.updateInterval = null;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadStatus();
+                this.startAutoUpdate();
+            }
+
+            bindEvents() {
+                document.getElementById('start-monitoring').addEventListener('click', () => {
+                    this.startMonitoring();
+                });
+
+                document.getElementById('stop-monitoring').addEventListener('click', () => {
+                    this.stopMonitoring();
+                });
+
+                document.getElementById('auto-restart-toggle').addEventListener('change', (e) => {
+                    this.setAutoRestart(e.target.checked);
+                });
+            }
+
+            async loadStatus() {
+                try {
+                    this.showLoading(true);
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    this.updateDashboard(data);
+                } catch (error) {
+                    console.error('Ошибка загрузки статуса:', error);
+                    this.showError('Ошибка загрузки данных');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async startMonitoring() {
+                try {
+                    const response = await fetch('/api/start_monitoring', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess('Мониторинг запущен');
+                        this.loadStatus();
+                    } else {
+                        this.showError(data.error || 'Ошибка запуска мониторинга');
+                    }
+                } catch (error) {
+                    console.error('Ошибка запуска мониторинга:', error);
+                    this.showError('Ошибка запуска мониторинга');
+                }
+            }
+
+            async stopMonitoring() {
+                try {
+                    const response = await fetch('/api/stop_monitoring', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess('Мониторинг остановлен');
+                        this.loadStatus();
+                    } else {
+                        this.showError(data.error || 'Ошибка остановки мониторинга');
+                    }
+                } catch (error) {
+                    console.error('Ошибка остановки мониторинга:', error);
+                    this.showError('Ошибка остановки мониторинга');
+                }
+            }
+
+            async setAutoRestart(enabled) {
+                try {
+                    const response = await fetch('/api/auto_restart', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ enabled: enabled })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess(data.message);
+                    } else {
+                        this.showError(data.error || 'Ошибка настройки автоперезапуска');
+                    }
+                } catch (error) {
+                    console.error('Ошибка настройки автоперезапуска:', error);
+                    this.showError('Ошибка настройки автоперезапуска');
+                }
+            }
+
+            async switchServer(serverKey) {
+                try {
+                    const response = await fetch('/api/switch_server', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ server: serverKey })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess(data.message);
+                        this.loadStatus();
+                    } else {
+                        this.showError(data.error || 'Ошибка переключения сервера');
+                    }
+                } catch (error) {
+                    console.error('Ошибка переключения сервера:', error);
+                    this.showError('Ошибка переключения сервера');
+                }
+            }
+
+            async startBot(serverKey, botId) {
+                try {
+                    const response = await fetch('/api/start_bot', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ server: serverKey, bot_id: botId })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess(data.message);
+                        this.loadStatus();
+                    } else {
+                        this.showError(data.error || 'Ошибка запуска бота');
+                    }
+                } catch (error) {
+                    console.error('Ошибка запуска бота:', error);
+                    this.showError('Ошибка запуска бота');
+                }
+            }
+
+            async stopBot(serverKey, botId) {
+                try {
+                    const response = await fetch('/api/stop_bot', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ server: serverKey, bot_id: botId })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess(data.message);
+                        this.loadStatus();
+                    } else {
+                        this.showError(data.error || 'Ошибка остановки бота');
+                    }
+                } catch (error) {
+                    console.error('Ошибка остановки бота:', error);
+                    this.showError('Ошибка остановки бота');
+                }
+            }
+
+            async restartBot(serverKey, botId) {
+                try {
+                    const response = await fetch('/api/restart_bot', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ server: serverKey, bot_id: botId })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showSuccess(data.message);
+                        this.loadStatus();
+                    } else {
+                        this.showError(data.error || 'Ошибка перезапуска бота');
+                    }
+                } catch (error) {
+                    console.error('Ошибка перезапуска бота:', error);
+                    this.showError('Ошибка перезапуска бота');
+                }
+            }
+
+            updateDashboard(data) {
+                this.updateMonitoringStatus(data.is_monitoring);
+                this.updateAutoRestartStatus(data.auto_restart_enabled);
+                this.updateServers(data.servers);
+                this.updateActiveServer(data.active_server);
+            }
+
+            updateMonitoringStatus(isMonitoring) {
+                const statusElement = document.getElementById('monitoring-status');
+                const startBtn = document.getElementById('start-monitoring');
+                const stopBtn = document.getElementById('stop-monitoring');
+
+                if (isMonitoring) {
+                    statusElement.innerHTML = '<span class="text-success"><i class="fas fa-circle"></i> Активен</span>';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } else {
+                    statusElement.innerHTML = '<span class="text-danger"><i class="fas fa-circle"></i> Остановлен</span>';
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            }
+
+            updateAutoRestartStatus(enabled) {
+                const toggle = document.getElementById('auto-restart-toggle');
+                toggle.checked = enabled;
+            }
+
+            updateServers(servers) {
+                const container = document.getElementById('servers-container');
+                container.innerHTML = '';
+
+                Object.entries(servers).forEach(([serverKey, serverData]) => {
+                    const serverCard = this.createServerCard(serverKey, serverData);
+                    container.appendChild(serverCard);
+                });
+            }
+
+            createServerCard(serverKey, serverData) {
+                const card = document.createElement('div');
+                card.className = 'col-md-6 mb-3';
+
+                const statusClass = this.getStatusClass(serverData.status);
+                const indicatorClass = this.getIndicatorClass(serverData.status);
+                const botsStatus = serverData.bots_status || {};
+                const runningBots = Object.values(botsStatus).filter(bot => bot.running).length;
+                const totalBots = Object.keys(botsStatus).length;
+
+                card.innerHTML = `
+                    <div class="card status-card ${statusClass}">
+                        <div class="card-body">
+                            <div class="server-title">
+                                <span class="status-indicator ${indicatorClass}"></span>
+                                ${serverKey === 'server1' ? 'Сервер 1 (Primary)' : 'Сервер 2 (Backup)'}
+                            </div>
+                            
+                            <div class="bots-summary">
+                                <span class="bot-status ${runningBots === totalBots ? 'bot-running' : 'bot-stopped'}">
+                                    ${runningBots}/${totalBots} ботов
+                                </span>
+                                <span class="compact-info ms-2">
+                                    ${this.getStatusText(serverData.status)} | 
+                                    ${this.formatDateTime(serverData.last_check)}
+                                </span>
+                            </div>
+                            
+                            <!-- Статус ботов -->
+                            <div id="bots-${serverKey}">
+                                ${this.createBotsList(serverKey, botsStatus)}
+                            </div>
+                            
+                            <div class="server-controls">
+                                <button class="btn btn-primary-custom btn-custom btn-sm" 
+                                        onclick="dashboard.switchServer('${serverKey}')"
+                                        ${serverData.status !== 'online' ? 'disabled' : ''}>
+                                    <i class="fas fa-exchange-alt"></i> Переключиться
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                return card;
+            }
+
+            createBotsList(serverKey, botsStatus) {
+                if (Object.keys(botsStatus).length === 0) {
+                    return '<p class="compact-info text-muted">Нет данных о ботах</p>';
+                }
+
+                return Object.entries(botsStatus).map(([botId, botData]) => {
+                    const botClass = botData.running ? 'running' : 'stopped';
+                    const botStatusText = botData.running ? 'Запущен' : 'Остановлен';
+                    
+                    return `
+                        <div class="bot-card ${botClass}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="compact-info">${botData.name || botId}</strong>
+                                    <span class="bot-status ${botData.running ? 'bot-running' : 'bot-stopped'}">
+                                        ${botStatusText}
+                                    </span>
+                                </div>
+                                <div class="bot-controls">
+                                    <button class="btn btn-success-custom btn-sm" 
+                                            onclick="dashboard.startBot('${serverKey}', '${botId}')"
+                                            ${botData.running ? 'disabled' : ''}
+                                            title="Запустить">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-danger-custom btn-sm" 
+                                            onclick="dashboard.stopBot('${serverKey}', '${botId}')"
+                                            ${!botData.running ? 'disabled' : ''}
+                                            title="Остановить">
+                                        <i class="fas fa-stop"></i>
+                                    </button>
+                                    <button class="btn btn-warning-custom btn-sm" 
+                                            onclick="dashboard.restartBot('${serverKey}', '${botId}')"
+                                            title="Перезапустить">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            ${botData.processes && botData.processes.length > 0 ? `
+                                <div class="mt-1">
+                                    <small class="compact-info text-muted">
+                                        PID: ${botData.processes[0].pid} | 
+                                        Процессы: ${botData.processes.length}
+                                    </small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateActiveServer(activeServer) {
+                const display = document.getElementById('active-server-display');
+                if (activeServer) {
+                    const serverName = activeServer === 'server1' ? 'Сервер 1 (Primary)' : 'Сервер 2 (Backup)';
+                    display.innerHTML = `<span class="active-server">${serverName}</span>`;
+                } else {
+                    display.innerHTML = '<span class="text-muted">Нет активного сервера</span>';
+                }
+            }
+
+            getStatusClass(status) {
+                switch (status) {
+                    case 'online': return 'status-online';
+                    case 'offline': return 'status-offline';
+                    case 'error': return 'status-error';
+                    default: return '';
+                }
+            }
+
+            getIndicatorClass(status) {
+                switch (status) {
+                    case 'online': return 'indicator-online';
+                    case 'offline': return 'indicator-offline';
+                    case 'error': return 'indicator-error';
+                    default: return 'indicator-offline';
+                }
+            }
+
+            getStatusText(status) {
+                switch (status) {
+                    case 'online': return 'Онлайн';
+                    case 'offline': return 'Офлайн';
+                    case 'error': return 'Ошибка';
+                    default: return 'Неизвестно';
+                }
+            }
+
+            formatDateTime(dateTimeString) {
+                if (!dateTimeString) return 'Неизвестно';
+                const date = new Date(dateTimeString);
+                return date.toLocaleTimeString('ru-RU', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+
+            startAutoUpdate() {
+                this.updateInterval = setInterval(() => {
+                    this.loadStatus();
+                }, 10000); // Обновление каждые 10 секунд
+            }
+
+            showLoading(show) {
+                const loading = document.getElementById('loading');
+                loading.style.display = show ? 'block' : 'none';
+            }
+
+            showSuccess(message) {
+                this.showNotification(message, 'success');
+            }
+
+            showError(message) {
+                this.showNotification(message, 'danger');
+            }
+
+            showNotification(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                alertDiv.style.cssText = 'top: 15px; right: 15px; z-index: 9999; min-width: 250px; font-size: 0.8rem;';
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                document.body.appendChild(alertDiv);
+                
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 4000);
+            }
+        }
+
+        // Инициализация дашборда
+        const dashboard = new MonitoringDashboard();
+    </script>
+</body>
+</html> 
