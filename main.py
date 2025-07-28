@@ -1,16 +1,22 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_cors import CORS
 import logging
 from server_monitor import ServerMonitor
 from config import Config
 from datetime import datetime
+import os
+import requests
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), 'uploads'))
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 app = Flask(__name__)
 app.config.from_object(Config)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Настройка CORS для хостинга
 CORS(app, origins=Config.CORS_ORIGINS)
@@ -146,6 +152,54 @@ def get_bots():
             'bots': server_config['bots']
         }
     return jsonify(bots_info)
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    """API для загрузки файла и обновления на всех серверах с автоперезапуском нужного бота"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'Файл не найден'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Имя файла не указано'}), 400
+    filename = file.filename
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(save_path)
+
+    # Определяем bot_id по имени файла (например, bot2.py -> bot2)
+    bot_id = None
+    for b in ['bot1', 'bot2', 'bot3', 'bot4']:
+        if filename.startswith(b):
+            bot_id = b
+            break
+
+    results = {}
+    for server_key, server_config in Config.SERVERS.items():
+        try:
+            agent_url = server_config['agent_url']
+            root_path = server_config.get('root_path', '/home/user/bots')
+            with open(save_path, 'rb') as f:
+                files = {'file': (filename, f)}
+                data = {'target_path': root_path, 'filename': filename}
+                resp = requests.post(f"{agent_url}/upload_file", files=files, data=data, timeout=30)
+                if resp.status_code == 200:
+                    # После успешной загрузки — перезапуск только нужного бота
+                    if bot_id and bot_id in server_config['bots']:
+                        restart_resp = requests.post(f"{agent_url}/restart_bot", json={'bot_id': bot_id}, timeout=30)
+                        if restart_resp.status_code == 200:
+                            results[server_key] = {'success': True, 'restarted': True}
+                        else:
+                            results[server_key] = {'success': True, 'restarted': False, 'error': f'Ошибка перезапуска: {restart_resp.status_code}'}
+                    else:
+                        results[server_key] = {'success': True, 'restarted': False, 'error': 'Бот не найден по имени файла'}
+                else:
+                    results[server_key] = {'success': False, 'error': f'HTTP {resp.status_code}'}
+        except Exception as e:
+            results[server_key] = {'success': False, 'error': str(e)}
+    return jsonify({'success': True, 'results': results})
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/health')
 def health_check():
