@@ -286,6 +286,28 @@
                 <p class="mt-2 compact-info">Обновление данных...</p>
             </div>
 
+            <!-- Форма загрузки обновлений -->
+            <div class="card status-card mb-3">
+                <div class="card-body py-3">
+                    <h6 class="mb-2"><i class="fas fa-upload"></i> Загрузка обновлений на все сервера</h6>
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-6 col-12">
+                                <input type="file" class="form-control form-control-sm" id="file-input" name="file" required>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <button type="submit" class="btn btn-info-custom btn-custom btn-sm w-100">
+                                    <i class="fas fa-cloud-upload-alt"></i> Загрузить на все сервера
+                                </button>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <span id="upload-status" class="compact-info"></span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Статус серверов -->
             <div id="servers-container">
                 <!-- Серверы будут загружены динамически -->
@@ -730,6 +752,44 @@
 
         // Инициализация дашборда
         const dashboard = new MonitoringDashboard();
+
+        // Загрузка файла на все сервера
+        const uploadForm = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+        const uploadStatus = document.getElementById('upload-status');
+
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!fileInput.files.length) {
+                uploadStatus.textContent = 'Выберите файл';
+                return;
+            }
+            uploadStatus.textContent = 'Загрузка...';
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    let msg = 'Загружено:';
+                    for (const [srv, res] of Object.entries(data.results)) {
+                        if (res.success) {
+                            msg += ` [${srv}: OK]`;
+                        } else {
+                            msg += ` [${srv}: Ошибка]`;
+                        }
+                    }
+                    uploadStatus.textContent = msg;
+                } else {
+                    uploadStatus.textContent = data.error || 'Ошибка загрузки';
+                }
+            } catch (err) {
+                uploadStatus.textContent = 'Ошибка сети';
+            }
+        });
     </script>
 </body>
 </html> 
